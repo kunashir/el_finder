@@ -239,6 +239,10 @@ module ElFinder
         @response[:error] = 'Access Denied'
         return
       end
+      if @current.file? && !available_mime?(@current)
+        @response[:error] = 'Mime type not allowed!'
+        return
+      end
       select = []
       @params[:upload].to_a.each do |file|
         if file.respond_to?(:tempfile)
@@ -528,6 +532,7 @@ module ElFinder
           :mime => 'directory'
         )
       elsif pathname.file?
+        return nil unless available_mime?(pathname)
         response.merge!(
           :size => pathname.size, 
           :mime => mime_handler.for(pathname),
@@ -620,6 +625,16 @@ module ElFinder
     def command_not_implemented
       @response[:error] = "Command '#{@params[:cmd]}' not yet implemented"
     end # of command_not_implemented
+
+    def available_mime?(pathname)
+      current_mime = mime_handler.for(pathname)
+      # Temporary fix for
+      # https://github.com/Studio-42/elFinder/issues/2210
+      mimes = @params['mimes'].is_a?(Array) ? @params['mimes'] : @params['mimes'].values
+      mimes.map do |mime|
+        current_mime.include?(mime)
+      end.any?
+    end
 
   end # of class Connector
 end # of module ElFinder
